@@ -1,5 +1,6 @@
 This implements the PPO[1] using Pytorch.
 ![img.png](img.png) 
+
 It is inspired directly by the below
 https://spinningup.openai.com/en/latest/algorithms/ppo.html
 https://github.com/implementation-matters/code-for-paper
