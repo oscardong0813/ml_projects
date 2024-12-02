@@ -55,13 +55,14 @@ class ActorNet(nn.Module):
             prev = h
             # self.layers.append(nn.Tanh())
         self.final = nn.Linear(prev, action_dim)
+        self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, state):
         activation = state
         for layer in self.layers:
             activation = F.tanh(layer(activation))
         output = self.final(activation)
-        return output
+        return self.softmax(output)
 
 
 if __name__ == '__main__':
@@ -70,3 +71,6 @@ if __name__ == '__main__':
     print(critic.layers)
     state = torch.tensor([1.,2.,3.,4.,5.,6.,7.,8.,9.,10.])
     print(critic.forward(state))
+    actor = ActorNet(10, 2)
+    print(actor.layers)
+    print(actor.forward(state), actor.final)
