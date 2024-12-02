@@ -16,7 +16,6 @@ class CriticNet(nn.Module):
     def __init__(self, state_dim, hidden_sizes=HIDDEN_SIZES):
         super().__init__()
         self.layers = nn.ModuleList()
-        self.activation = ACTIVATION()
         prev = state_dim
 
         for h in hidden_sizes:
@@ -45,8 +44,24 @@ class ActorNet(nn.Module):
     action dim
     a list of neurons in hidden layer
     '''
-    def __init__(self, state_dim, action_dim, hid_sizes = HIDDEN_SIZES):
-        pass
+    def __init__(self, state_dim, action_dim, hidden_sizes = HIDDEN_SIZES):
+        super().__init__()
+        self.layers = nn.ModuleList()
+        prev = state_dim
+
+        for h in hidden_sizes:
+            layer = nn.Linear(prev, h)
+            self.layers.append(layer)
+            prev = h
+            # self.layers.append(nn.Tanh())
+        self.final = nn.Linear(prev, action_dim)
+
+    def forward(self, state):
+        activation = state
+        for layer in self.layers:
+            activation = F.tanh(layer(activation))
+        output = self.final(activation)
+        return output
 
 
 if __name__ == '__main__':
