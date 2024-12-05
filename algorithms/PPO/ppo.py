@@ -4,13 +4,15 @@ import penv as penv
 from network import *
 
 class PPO:
-    def __init__(self, env, total_timestep=10000, batch_size=200):
+    def __init__(self, env, total_timestep=10, batch_size=2, gamma = 0.95):
         #extract env info
         self.env = env
         self.state_dim = env.observation_space.shape[0]
         self.act_dim = env.action_space.shape[0]
         self.total_timestep = total_timestep
         self.batch_size = batch_size
+
+        self.gamma = gamma #discount rate for rewards
 
         #STEP 1 (initial policy parameters and initial value function parameters) initialize actor and critic networks
         self.actor = ActorNet(self.state_dim,self.act_dim)
@@ -63,10 +65,15 @@ class PPO:
         :param batch_rews:an array of rewards from the batch
         :return: discounted rewards using gamma discount rate
         '''
-        batch_rtgs = []
+        batch_disc_rew = []
         for ep_rew in reversed(batch_rews):
-            continue
-        return batch_rews
+            disc_rew = 0
+            for rew in reversed(ep_rew):
+                disc_rew = rew + disc_rew * self.gamma
+                batch_disc_rew.insert(0, disc_rew)
+
+        batch_disc_rew = torch.tensor(batch_disc_rew, dtype=torch.float)
+        return batch_disc_rew
     def compute_adv_est(self):
         pass
 
