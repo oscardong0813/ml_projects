@@ -55,14 +55,14 @@ class ActorNet(nn.Module):
             prev = h
             # self.layers.append(nn.Tanh())
         self.final = nn.Linear(prev, action_dim)
-        # self.softmax = nn.Softmax(dim=-1)
+        self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, state):
         activation = state
         for layer in self.layers:
             activation = F.tanh(layer(activation))
         output = self.final(activation)
-        return output
+        return self.softmax(output)
 
 
 if __name__ == '__main__':
