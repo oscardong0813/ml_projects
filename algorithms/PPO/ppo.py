@@ -1,7 +1,7 @@
 import gymnasium as gym
 import penv as penv
 
-from network import ActorNet, CriticNet
+from network import *
 
 class PPO:
     def __init__(self, env, total_timestep=10000, batch_size=200):
@@ -27,10 +27,47 @@ class PPO:
             break
 
     def rollout(self):
+        batch_states = []
+        batch_acts = []
+        batch_log_probs =[]
+        batch_rews = []
+        batch_disc_rew = []
+        batch_lens = []
+
+        t = 0
+        # while t < self.batch_size:
+        #     ep_rews = []
+        #     state = self.env.reset()
+        #     done = False
+        #     break
         pass
-    def rewardsTGo(self):
-        pass
-    def advEst(self):
+
+    def choose_action(self,state):
+        '''
+        :param state:
+        :return: action to take and log probability of the action
+
+        only softmax used, no particular distribution used.
+        '''
+        state = torch.tensor([state], dtype=torch.float)
+        dist = self.actor(state)
+        action = dist.sample()
+        # log_probs = torch.sequeeze(dist.log_prob(action)).item()
+        # action = torch.sequeeze(action).item()
+        log_prob = dist.log_prob(action)
+        print('action sampled ', action, ' and log prob of the action ', log_prob)
+        return action, log_prob
+
+    def compute_disc_rew(self, batch_rews):
+        '''
+        :param batch_rews:an array of rewards from the batch
+        :return: discounted rewards using gamma discount rate
+        '''
+        batch_rtgs = []
+        for ep_rew in reversed(batch_rews):
+            continue
+        return batch_rews
+    def compute_adv_est(self):
         pass
 
 if __name__ == '__main__':
