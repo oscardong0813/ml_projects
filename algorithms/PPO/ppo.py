@@ -1,16 +1,22 @@
 import gymnasium as gym
+from gymnasium.spaces import Discrete
 import penv as penv
-
+from torch.distributions.categorical import Categorical
 from network import *
 
 class PPO:
-    def __init__(self, env, total_timestep=10, batch_size=2, gamma = 0.95):
+    def __init__(self, env, total_timestep=10, batch_size=5, max_timesteps_per_ep = 3, gamma = 0.95):
         #extract env info
         self.env = env
         self.state_dim = env.observation_space.shape[0]
-        self.act_dim = env.action_space.shape[0]
+        #checking if action space is discrete
+        if isinstance(env.action_space, Discrete):
+            self.act_dim = env.action_space.n
+        else:
+            self.act_dim = env.action_space.shape[0]
         self.total_timestep = total_timestep
         self.batch_size = batch_size
+        self.max_timsteps_per_episode = max_timesteps_per_ep
 
         self.gamma = gamma #discount rate for rewards
 
@@ -29,20 +35,47 @@ class PPO:
             break
 
     def rollout(self):
+        print('starting rollout')
         batch_states = []
         batch_acts = []
         batch_log_probs =[]
         batch_rews = []
-        batch_disc_rew = []
+        batch_disc_rews = []
         batch_lens = []
 
         t = 0
-        # while t < self.batch_size:
-        #     ep_rews = []
-        #     state = self.env.reset()
-        #     done = False
-        #     break
-        pass
+        while t < self.batch_size:
+            ep_rews = []
+            state = self.env.reset()
+            state = state[0]
+            for ep_timestep in range(self.max_timsteps_per_episode):
+                t += 1
+                # print('adding to batch states ', state)
+                # batch_states.append(torch.tensor(state,dtype=torch.float))
+                batch_states.append(state)
+                sampled_action, log_prob = self.choose_action(state)
+                # print('sampled action ', sampled_action.item(), ' log_prob ', log_prob)
+                state, rew, terminated, truncated, info = self.env.step(sampled_action.item())
+                print('stepped ', t)
+                ep_rews.append(rew)
+                batch_acts.append(sampled_action)
+                batch_log_probs.append(log_prob)
+
+                if terminated or truncated:
+                    break
+
+            batch_lens.append(ep_timestep +1)
+            batch_rews.append(ep_rews)
+
+        # print('batched states ', batch_states)
+        batch_states = torch.tensor(batch_states, dtype=torch.float)
+        batch_acts = torch.tensor(batch_acts, dtype=torch.float)
+        batch_log_probs = torch.tensor(batch_log_probs, dtype=torch.float)
+        batch_disc_rews = self.compute_disc_rew(batch_rews)
+        print('batch states ', batch_states)
+        print('batch rew ', batch_rews, batch_disc_rews)
+
+        return batch_states, batch_acts, batch_log_probs,batch_disc_rews, batch_lens
 
     def choose_action(self,state):
         '''
@@ -51,13 +84,16 @@ class PPO:
 
         only softmax used, no particular distribution used.
         '''
-        state = torch.tensor([state], dtype=torch.float)
-        dist = self.actor(state)
+        # print('input state ', type(state), state)
+        state = torch.tensor(state, dtype=torch.float)
+
+        # print(self.actor(state))
+        dist = Categorical(self.actor(state))
         action = dist.sample()
         # log_probs = torch.sequeeze(dist.log_prob(action)).item()
         # action = torch.sequeeze(action).item()
         log_prob = dist.log_prob(action)
-        print('action sampled ', action, ' and log prob of the action ', log_prob)
+        # print('action sampled ', action, ' and log prob of the action ', log_prob)
         return action, log_prob
 
     def compute_disc_rew(self, batch_rews):
@@ -74,13 +110,13 @@ class PPO:
 
         batch_disc_rew = torch.tensor(batch_disc_rew, dtype=torch.float)
         return batch_disc_rew
+
     def compute_adv_est(self):
         pass
 
 if __name__ == '__main__':
     env = gym.make('CartPole-v1', render_mode='rgb_array')
-    print(env.observation_space.shape, env.action_space.shape)
-    env.reset() #initial state, [cart position, cart velocity, pole angle, pole angular velocity]
-    next_state, rewards, terminated, truncated, info = env.step(0)
-    env.render()
+    agent = PPO(env)
+    agent.rollout()
+
 
