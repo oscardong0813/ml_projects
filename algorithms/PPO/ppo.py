@@ -12,8 +12,10 @@ class PPO:
         #checking if action space is discrete
         if isinstance(env.action_space, Discrete):
             self.act_dim = env.action_space.n
+            self.discrete_agent = True
         else:
             self.act_dim = env.action_space.shape[0]
+            self.discrete_agent = False
         self.total_timestep = total_timestep
         self.batch_size = batch_size
         self.max_timsteps_per_episode = max_timesteps_per_ep
@@ -32,7 +34,12 @@ class PPO:
             #use roll_out method to collect STEP 4 rewards-to-go, STEP 5advantage estimates
             #STEP 6 update the policy by maximizing the ppo-clip objective (via stochastic gradient ascent with Adam)
             #Step 7 fit value function by regression on mean-sequared error
-            break
+            batch_states, batch_acts, batch_log_prob, batch_disc_rews, batch_lens = self.rollout()
+
+            critic_val = self.critic(batch_states).squeeze()
+
+
+
 
     def rollout(self):
         print('starting rollout')
@@ -40,7 +47,7 @@ class PPO:
         batch_acts = []
         batch_log_probs =[]
         batch_rews = []
-        batch_disc_rews = []
+        # batch_disc_rews = []
         batch_lens = []
 
         t = 0
@@ -56,7 +63,7 @@ class PPO:
                 sampled_action, log_prob = self.choose_action(state)
                 # print('sampled action ', sampled_action.item(), ' log_prob ', log_prob)
                 state, rew, terminated, truncated, info = self.env.step(sampled_action.item())
-                print('stepped ', t)
+                # print('stepped ', t)
                 ep_rews.append(rew)
                 batch_acts.append(sampled_action)
                 batch_log_probs.append(log_prob)
@@ -72,10 +79,17 @@ class PPO:
         batch_acts = torch.tensor(batch_acts, dtype=torch.float)
         batch_log_probs = torch.tensor(batch_log_probs, dtype=torch.float)
         batch_disc_rews = self.compute_disc_rew(batch_rews)
-        print('batch states ', batch_states)
-        print('batch rew ', batch_rews, batch_disc_rews)
+        # print('batch states ', batch_states)
+        # print('batch rew ', batch_rews, batch_disc_rews)
 
         return batch_states, batch_acts, batch_log_probs,batch_disc_rews, batch_lens
+
+    def evaluate(self, batch_states, batch_acts):
+        v = self.critic(batch_states).squeeze()
+
+        dist = Categorical(self.actor(batch_states))
+        log_probs = dist.log_prob(batch_acts)
+        return v, log_probs
 
     def choose_action(self,state):
         '''
@@ -117,6 +131,8 @@ class PPO:
 if __name__ == '__main__':
     env = gym.make('CartPole-v1', render_mode='rgb_array')
     agent = PPO(env)
-    agent.rollout()
+    batch_states, batch_acts, batch_log_probs,batch_disc_rews, batch_lens = agent.rollout()
+    print(agent.evaluate(batch_states,batch_acts))
+
 
 
