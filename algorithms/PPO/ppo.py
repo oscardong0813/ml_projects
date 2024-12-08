@@ -133,7 +133,9 @@ class PPO:
         critic_val_for_adv_est = self.critic(batch_states).squeeze().detach()
         adv_est = batch_disc_rews - critic_val_for_adv_est
 
-        return adv_est
+        normalized = (adv_est - adv_est.mean()) / (adv_est.std() + 1e-10)
+
+        return normalized
 
 if __name__ == '__main__':
     env = gym.make('CartPole-v1', render_mode='rgb_array')
