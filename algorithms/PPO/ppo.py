@@ -5,7 +5,7 @@ from torch.distributions.categorical import Categorical
 from network import *
 
 class PPO:
-    def __init__(self, env, total_timestep=10, batch_size=5, max_timesteps_per_ep = 3, gamma = 0.95):
+    def __init__(self, env, total_timestep=10, batch_size=5, max_timesteps_per_ep = 3, epochs = 5, gamma = 0.95, lr = 0.99):
         #extract env info
         self.env = env
         self.state_dim = env.observation_space.shape[0]
@@ -19,7 +19,9 @@ class PPO:
         self.total_timestep = total_timestep
         self.batch_size = batch_size
         self.max_timsteps_per_episode = max_timesteps_per_ep
+        self.epochs = epochs
 
+        self.lr = lr
         self.gamma = gamma #discount rate for rewards
 
         #STEP 1 (initial policy parameters and initial value function parameters) initialize actor and critic networks
@@ -31,13 +33,14 @@ class PPO:
         timestep_sofar = 0
         while timestep_sofar < self.total_timestep:
             #STEP 3 collect set of trajectories by running the current policy.
-            #use roll_out method to collect STEP 4 rewards-to-go, STEP 5advantage estimates
-            #STEP 6 update the policy by maximizing the ppo-clip objective (via stochastic gradient ascent with Adam)
-            #Step 7 fit value function by regression on mean-sequared error
+            #use roll_out method to collect STEP 4 rewards-to-go,
             batch_states, batch_acts, batch_log_prob, batch_disc_rews, batch_lens = self.rollout()
 
-            critic_val = self.critic(batch_states).squeeze()
-
+            # STEP 5advantage estimates
+            adv_est = self.compute_adv_est(batch_states)
+            break
+            #STEP 6 update the policy by maximizing the ppo-clip objective (via stochastic gradient ascent with Adam)
+            #Step 7 fit value function by regression on mean-sequared error
 
 
 
@@ -125,14 +128,19 @@ class PPO:
         batch_disc_rew = torch.tensor(batch_disc_rew, dtype=torch.float)
         return batch_disc_rew
 
-    def compute_adv_est(self):
-        pass
+    def compute_adv_est(self, batch_states):
+        # using detach() so that critic vals are determined before epoch updates network
+        critic_val_for_adv_est = self.critic(batch_states).squeeze().detach()
+        adv_est = batch_disc_rews - critic_val_for_adv_est
+
+        return adv_est
 
 if __name__ == '__main__':
     env = gym.make('CartPole-v1', render_mode='rgb_array')
     agent = PPO(env)
     batch_states, batch_acts, batch_log_probs,batch_disc_rews, batch_lens = agent.rollout()
     print(agent.evaluate(batch_states,batch_acts))
+    print('adv est ', agent.compute_adv_est(batch_states))
 
 
 
