@@ -6,10 +6,13 @@ from torch.distributions.categorical import Categorical
 from network import *
 
 class PPO:
-    def __init__(self, env, total_timestep=10, batch_size=5, max_timesteps_per_ep = 3, epochs = 5, gamma = 0.95, epsilon = 0.2, lr = 0.99):
+    def __init__(self, env, RNN = False, total_timestep=10, batch_size=5, max_timesteps_per_ep = 3, epochs = 2, gamma = 0.95, epsilon = 0.2, lr = 0.99):
         #extract env info
         self.env = env
         self.state_dim = env.observation_space.shape[0]
+
+        #if use RNN networks
+        self.RNN = RNN
         #checking if action space is discrete
         if isinstance(env.action_space, Discrete):
             self.act_dim = env.action_space.n
