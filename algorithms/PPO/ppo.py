@@ -36,6 +36,9 @@ class PPO:
         self.critic_optim = Adam(self.actor.parameters(), lr=self.lr)
 
         self.logger = {
+            'batch_lens':[],
+            'batch_rewards':[],
+            'actor_losses':[]
 
         }
 
@@ -68,6 +71,8 @@ class PPO:
                 self.critic_optim.zero_grad()
                 critic_loss.backward()
                 self.critic_optim.step()
+
+                self.logger['actor_loss'].append(actor_loss.detach())
 
             timestep_sofar += np.sum(batch_lens)
 
@@ -111,6 +116,9 @@ class PPO:
         batch_disc_rews = self.compute_disc_rew(batch_rews)
         # print('batch states ', batch_states)
         # print('batch rew ', batch_rews, batch_disc_rews)
+
+        self.logger['batch_rewards'] = batch_rews
+        self.logger['batch_lens'] = batch_lens
 
         return batch_states, batch_acts, batch_log_probs,batch_disc_rews, batch_lens
 
