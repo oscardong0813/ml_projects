@@ -6,7 +6,7 @@ from torch.distributions.categorical import Categorical
 from network import *
 
 class PPO:
-    def __init__(self, env, RNN = False, total_timestep=10, batch_size=5, max_timesteps_per_ep = 3, epochs = 2, gamma = 0.95, epsilon = 0.2, lr = 0.99):
+    def __init__(self, env, RNN = False, total_timestep=15, batch_size=5, max_timesteps_per_ep = 5, epochs = 5, gamma = 0.95, epsilon = 0.2, lr = 0.99):
         #extract env info
         self.env = env
         self.state_dim = env.observation_space.shape[0]
@@ -38,8 +38,8 @@ class PPO:
         self.logger = {
             'batch_lens':[],
             'batch_rewards':[],
-            'actor_losses':[]
-
+            'actor_losses':[],
+            'batch_acts':[]
         }
 
     def learn(self):
@@ -72,7 +72,7 @@ class PPO:
                 critic_loss.backward()
                 self.critic_optim.step()
 
-                self.logger['actor_loss'].append(actor_loss.detach())
+                self.logger['actor_losses'].append(actor_loss.detach())
 
             timestep_sofar += np.sum(batch_lens)
 
@@ -117,8 +117,9 @@ class PPO:
         # print('batch states ', batch_states)
         # print('batch rew ', batch_rews, batch_disc_rews)
 
-        self.logger['batch_rewards'] = batch_rews
-        self.logger['batch_lens'] = batch_lens
+        self.logger['batch_rewards'].append(batch_rews)
+        self.logger['batch_lens'].append(batch_lens)
+        self.logger['batch_acts'].append(batch_acts)
 
         return batch_states, batch_acts, batch_log_probs,batch_disc_rews, batch_lens
 
@@ -180,9 +181,15 @@ class PPO:
 
 
 if __name__ == '__main__':
-    env = gym.make('CartPole-v1', render_mode='rgb_array')
-    agent = PPO(env)
-    agent.learn()
+    env1 = gym.make('CartPole-v1', render_mode='rgb_array')
+    agent1 = PPO(env1)
+    agent1.learn()
+    print(agent1.logger)
+
+    env2 = gym.make('MountainCar-v0')
+    agent2 = PPO(env2)
+    agent2.learn()
+    print(agent2.logger)
 
 
 
